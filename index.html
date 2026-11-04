@@ -1,0 +1,177 @@
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MEGA RUMBA FITNESS - Lector QR</title>
+<script src="https://unpkg.com/html5-qrcode"></script>
+<style>
+body {
+  margin:0; padding:20px;
+  background:#100d18; color:white;
+  font-family:Arial,sans-serif;
+}
+main {max-width:520px;margin:auto}
+h1 {color:#f6c84b;text-align:center}
+input,button {
+  width:100%;box-sizing:border-box;
+  padding:15px;margin:8px 0;
+  border:0;border-radius:10px;font-size:16px;
+}
+input {background:white;color:#111}
+button {background:#e6b83e;font-weight:bold;cursor:pointer}
+#reader {background:white;border-radius:12px;margin-top:15px;overflow:hidden}
+#result {background:#292333;padding:18px;border-radius:12px;margin-top:15px}
+.ok {background:#075c36!important}
+.bad {background:#8a2028!important}
+</style>
+</head>
+<body>
+<main>
+<h1>MEGA RUMBA FITNESS</h1>
+<p>Escáner oficial de entradas</p>
+
+<label>PIN del personal</label>
+<input id="pin" type="password" placeholder="Escribe el PIN">
+
+<button id="start">ACTIVAR CÁMARA Y ESCANEAR</button>
+<button id="stop" style="display:none">DETENER CÁMARA</button>
+
+<div id="reader"></div>
+<div id="result">Esperando escaneo...</div>
+</main>
+
+<script>
+const API_URL = "PEGA_AQUI_URL_APPS_SCRIPT";
+
+let scanner = null;
+let busy = false;
+
+function mostrar(r) {
+  const el = document.getElementById("result");
+  el.className = r.ok ? "ok" : "bad";
+  el.replaceChildren();
+
+  const title = document.createElement("h2");
+  title.textContent = r.status || "RESULTADO";
+  el.appendChild(title);
+
+  const name = document.createElement("b");
+  name.textContent = r.nombre || "";
+  el.appendChild(name);
+
+  const info = document.createElement("p");
+  info.textContent =
+    (r.folio || "") + " · " + (r.grupo || "");
+  el.appendChild(info);
+
+  const msg = document.createElement("p");
+  msg.textContent = r.message || "";
+  el.appendChild(msg);
+}
+
+function consultar(token) {
+  return new Promise((resolve, reject) => {
+    const callback = "respuestaQR_" + Date.now();
+
+    const script = document.createElement("script");
+    const timeout = setTimeout(() => {
+      delete window[callback];
+      script.remove();
+      reject(new Error("Tiempo de espera agotado."));
+    }, 15000);
+
+    window[callback] = data => {
+      clearTimeout(timeout);
+      delete window[callback];
+      script.remove();
+      resolve(data);
+    };
+
+    const url = new URL(API_URL);
+    url.searchParams.set("action", "checkIn");
+    url.searchParams.set("token", token);
+    url.searchParams.set(
+      "pin", document.getElementById("pin").value
+    );
+    url.searchParams.set("callback", callback);
+
+    script.src = url.toString();
+    script.onerror = () => {
+      clearTimeout(timeout);
+      delete window[callback];
+      script.remove();
+      reject(new Error("No se pudo conectar con el sistema."));
+    };
+
+    document.body.appendChild(script);
+  });
+}
+
+async function procesarQR(token) {
+  if (busy) return;
+  busy = true;
+  if (scanner) scanner.pause(true);
+
+  try {
+    const resultado = await consultar(token);
+    mostrar(resultado);
+  } catch (error) {
+    mostrar({
+      ok:false,
+      status:"ERROR DE CONEXIÓN",
+      message:error.message
+    });
+  }
+
+  setTimeout(() => {
+    busy = false;
+    if (scanner) scanner.resume();
+  }, 2500);
+}
+
+document.getElementById("start").onclick = async () => {
+  if (!document.getElementById("pin").value.trim()) {
+    alert("Escribe el PIN del personal.");
+    return;
+  }
+
+  try {
+    if (!scanner) scanner = new Html5Qrcode("reader");
+
+    await scanner.start(
+      {facingMode:"environment"},
+      {fps:10, qrbox:{width:240,height:240}},
+      procesarQR,
+      () => {}
+    );
+
+    document.getElementById("start").style.display="none";
+    document.getElementById("stop").style.display="block";
+
+    mostrar({
+      ok:true,
+      status:"CÁMARA ACTIVA",
+      message:"Acerca una entrada QR a la cámara."
+    });
+
+  } catch(error) {
+    mostrar({
+      ok:false,
+      status:"CÁMARA NO DISPONIBLE",
+      message:String(error)
+    });
+  }
+};
+
+document.getElementById("stop").onclick = async () => {
+  if (scanner) {
+    await scanner.stop();
+    document.getElementById("start").style.display="block";
+    document.getElementById("stop").style.display="none";
+  }
+};
+</script>
+</body>
+</html>
