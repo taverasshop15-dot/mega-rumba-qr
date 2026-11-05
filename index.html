@@ -43,7 +43,7 @@ button {background:#e6b83e;font-weight:bold;cursor:pointer}
 </main>
 
 <script>
-const API_URL = "https://script.google.com/macros/s/AKfycbzMjkm9KhEFgX1XgQTXUZsN0xkZmztuXzI9Qocs3ThGC-Hcw402DG4WtfijpO_T0S8N/exec";
+const API_URL = "https://mega-rumba-checkin.taverasshop15.workers.dev";
 
 let scanner = null;
 let busy = false;
@@ -71,42 +71,23 @@ function mostrar(r) {
   el.appendChild(msg);
 }
 
-function consultar(token) {
-  return new Promise((resolve, reject) => {
-    const callback = "respuestaQR_" + Date.now();
-
-    const script = document.createElement("script");
-    const timeout = setTimeout(() => {
-      delete window[callback];
-      script.remove();
-      reject(new Error("Tiempo de espera agotado."));
-    }, 15000);
-
-    window[callback] = data => {
-      clearTimeout(timeout);
-      delete window[callback];
-      script.remove();
-      resolve(data);
-    };
-
-    const url = new URL(API_URL);
-    url.searchParams.set("action", "checkIn");
-    url.searchParams.set("token", token);
-    url.searchParams.set(
-      "pin", document.getElementById("pin").value
-    );
-    url.searchParams.set("callback", callback);
-
-    script.src = url.toString();
-    script.onerror = () => {
-      clearTimeout(timeout);
-      delete window[callback];
-      script.remove();
-      reject(new Error("No se pudo conectar con el sistema."));
-    };
-
-    document.body.appendChild(script);
+async function consultar(token) {
+  const respuesta = await fetch(API_URL, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      token: token,
+      pin: document.getElementById("pin").value
+    })
   });
+
+  if (!respuesta.ok) {
+    throw new Error("No se pudo conectar con el sistema.");
+  }
+
+  return await respuesta.json();
 }
 
 async function procesarQR(token) {
