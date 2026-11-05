@@ -48,6 +48,7 @@ const API_URL = "https://mega-rumba-checkin.taverasshop15.workers.dev";
 let scanner = null;
 let busy = false;
 
+
 function mostrar(r) {
   const el = document.getElementById("result");
   el.className = r.ok ? "ok" : "bad";
@@ -57,19 +58,57 @@ function mostrar(r) {
   title.textContent = r.status || "RESULTADO";
   el.appendChild(title);
 
-  const name = document.createElement("b");
+  const name = document.createElement("h2");
   name.textContent = r.nombre || "";
   el.appendChild(name);
 
   const info = document.createElement("p");
-  info.textContent =
-    (r.folio || "") + " · " + (r.grupo || "");
+  info.textContent = (r.folio || "") + " · " + (r.grupo || "");
   el.appendChild(info);
+
+  if (r.ok && r.grupo) {
+    const colores = {
+      "Azul": ["#2563eb", "#ffffff"],
+      "Rojo": ["#dc2626", "#ffffff"],
+      "Verde": ["#16a34a", "#ffffff"],
+      "Amarillo": ["#eab308", "#171421"],
+      "Azul claro": ["#7dd3fc", "#171421"],
+      "Morado": ["#8b5cf6", "#ffffff"],
+      "Naranja": ["#f97316", "#171421"],
+      "Rosado": ["#f472b6", "#171421"],
+      "Gris": ["#9ca3af", "#171421"],
+      "Negro": ["#111827", "#ffffff"],
+      "Fucsia": ["#d946ef", "#171421"],
+      "Menta": ["#6ee7b7", "#171421"],
+      "Blanco": ["#f8fafc", "#171421"],
+      "Magenta": ["#c026d3", "#ffffff"],
+      "Plateado": ["#cbd5e1", "#171421"],
+      "Celeste": ["#38bdf8", "#171421"],
+      "Turquesa": ["#14b8a6", "#171421"]
+    };
+
+    const grupo = String(r.grupo).trim();
+    const color = colores[grupo] || ["#e6b83e", "#171421"];
+
+    const manilla = document.createElement("div");
+    manilla.style.background = color[0];
+    manilla.style.color = color[1];
+    manilla.style.padding = "20px 10px";
+    manilla.style.borderRadius = "12px";
+    manilla.style.margin = "18px 0";
+    manilla.style.textAlign = "center";
+    manilla.style.fontWeight = "bold";
+    manilla.style.fontSize = "22px";
+    manilla.textContent = "ENTREGAR MANILLA " + grupo.toUpperCase();
+
+    el.appendChild(manilla);
+  }
 
   const msg = document.createElement("p");
   msg.textContent = r.message || "";
   el.appendChild(msg);
 }
+
 
 async function consultar(token) {
   const respuesta = await fetch(API_URL, {
