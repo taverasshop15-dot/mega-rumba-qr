@@ -91,6 +91,7 @@ async function consultar(token) {
 }
 
 async function procesarQR(token) {
+  alert("QR leído: " + token);
   if (busy) return;
   busy = true;
   if (scanner) scanner.pause(true);
